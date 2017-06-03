@@ -32,10 +32,16 @@ class ViewController: UIViewController {
         let sphere = SCNSphere(radius: 20.0)
         sphere.firstMaterial!.isDoubleSided = true
         sphere.firstMaterial!.diffuse.contents = image
+        
         let sphereNode = SCNNode(geometry: sphere)
         sphereNode.position = SCNVector3Make(0,0,0)
         scene.rootNode.addChildNode(sphereNode)
         
+        let cameraNode = SCNNode()
+        cameraNode.camera = SCNCamera()
+        cameraNode.position = SCNVector3Make(0, 0, 0)
+        scene.rootNode.addChildNode(cameraNode)
+       
         return scene
     }()
     
@@ -44,8 +50,6 @@ class ViewController: UIViewController {
         
         self.view.addSubview(sceneView)
         sceneView.scene = scene
-        
-        
         
     }
 
