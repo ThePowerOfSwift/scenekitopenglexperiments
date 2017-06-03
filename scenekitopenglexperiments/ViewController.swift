@@ -46,32 +46,9 @@ class ViewController: UIViewController {
         return scene
     }()
     
-//    lazy var sphere: SCNSphere = {
-//        guard let imagePath = Bundle.main.path(forResource: "Hellbrunn25", ofType: "jpg") else {
-//            fatalError("Failed to find path for panaromic file.")
-//        }
-//        guard let image = UIImage(contentsOfFile:imagePath) else {
-//            fatalError("Failed to load panoramic image")
-//        }
-//        
-//        let sphere = SCNSphere(radius: 20.0)
-//        sphere.firstMaterial!.isDoubleSided = true
-//        sphere.firstMaterial!.diffuse.contents = image
-//        
-//        return sphere
-//    }()
-//    
-//    lazy var sphereNode: SCNNode = {
-//        let node = SCNNode(geometry: sphere)
-//        node.position = SCNVector3Make(0,0,0)
-//        scene.rootNode.addChildNode(node)
-//        
-//        return node
-//    }()
+    lazy var markedPoints:[SCNVector3] = [SCNVector3]()
     
-    var markedPoints = [SCNVector3]()
-    
-    var tapGestRec = UITapGestureRecognizer()
+    lazy var tapGestRec = UITapGestureRecognizer()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -113,5 +90,10 @@ class ViewController: UIViewController {
         sceneView.bottomAnchor.constraint(equalTo: bottomLayoutGuide.topAnchor).isActive = true
     }
     
+    override var prefersStatusBarHidden: Bool {
+        get {
+            return true
+        }
+    }
 }
 
