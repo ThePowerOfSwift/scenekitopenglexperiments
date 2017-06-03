@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F6D208E41EE346F3001A6019 /* Hellbrunn25.jpg in Resources */ = {isa = PBXBuildFile; fileRef = F6D208E31EE346F3001A6019 /* Hellbrunn25.jpg */; };
 		F6F5A2A81EE342A800E94084 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F5A2A71EE342A800E94084 /* AppDelegate.swift */; };
 		F6F5A2AA1EE342A800E94084 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F5A2A91EE342A800E94084 /* ViewController.swift */; };
 		F6F5A2AF1EE342A800E94084 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F6F5A2AE1EE342A800E94084 /* Assets.xcassets */; };
@@ -14,6 +15,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F6D208E31EE346F3001A6019 /* Hellbrunn25.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = Hellbrunn25.jpg; sourceTree = "<group>"; };
 		F6F5A2A41EE342A800E94084 /* scenekitopenglexperiments.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = scenekitopenglexperiments.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F6F5A2A71EE342A800E94084 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		F6F5A2A91EE342A800E94084 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -54,6 +56,7 @@
 			children = (
 				F6F5A2A71EE342A800E94084 /* AppDelegate.swift */,
 				F6F5A2A91EE342A800E94084 /* ViewController.swift */,
+				F6D208E31EE346F3001A6019 /* Hellbrunn25.jpg */,
 				F6F5A2AE1EE342A800E94084 /* Assets.xcassets */,
 				F6F5A2B01EE342A800E94084 /* LaunchScreen.storyboard */,
 				F6F5A2B31EE342A800E94084 /* Info.plist */,
@@ -122,6 +125,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F6F5A2B21EE342A800E94084 /* LaunchScreen.storyboard in Resources */,
+				F6D208E41EE346F3001A6019 /* Hellbrunn25.jpg in Resources */,
 				F6F5A2AF1EE342A800E94084 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -290,6 +294,7 @@
 				F6F5A2B81EE342A800E94084 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
