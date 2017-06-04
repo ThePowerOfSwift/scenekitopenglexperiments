@@ -60,6 +60,7 @@ class ViewController: UIViewController {
     }()
     
     lazy var extractedScene:SCNScene = {
+        //TODO: showing the source sphere as done below is only to serve as a placeholder. once we have extracted textures from the sphere scene, we should dump them in this scene
         
         guard let imagePath = Bundle.main.path(forResource: "gallery", ofType: "jpeg") else {
             fatalError("Failed to find path for panaromic file.")
@@ -98,8 +99,10 @@ class ViewController: UIViewController {
                 toggleButton.isEnabled = true
                 drawLine(between: markedPoints[markedPoints.count - 1], and: markedPoints[markedPoints.count - 2])
                 drawLine(between: markedPoints[markedPoints.count - 1], and: markedPoints[0])
-            } else {
+            }
+            else {
                 markedPoints.removeFirst().removeFromParentNode()
+                //TODO:update lines for debug visualization purposes only
             }
             
             extractTexture(from: markedPoints)
@@ -113,6 +116,7 @@ class ViewController: UIViewController {
         let element = SCNGeometryElement(indices: indices, primitiveType: .line)
         
         let lineShape = SCNGeometry(sources: [source], elements: [element])
+        lineShape.materials.first?.diffuse.contents = UIColor.cyan
         
         let lineNode = SCNNode(geometry: lineShape)
         
@@ -144,24 +148,33 @@ class ViewController: UIViewController {
         }
         
         let point2d = sender.location(in: self.view)
+        print(point2d)
         let hitResults:[SCNHitTestResult] = activeSceneView.hitTest(point2d, options: nil)
         
         if let result = hitResults.first {
             markPoint(on: result.node, at: result.localCoordinates)
-            print(result.localCoordinates)
         }
     }
     
 
     ///adds point to 360 image
     func markPoint(on sphere:SCNNode, at point3d:SCNVector3) {
-        let mark = SCNSphere(radius: 0.2)
+        let mark = SCNSphere(radius: 0.3)
         mark.firstMaterial?.diffuse.contents = UIColor.cyan
         
         let markerNode = SCNNode(geometry: mark)
         markerNode.position = point3d
         sphere.addChildNode(markerNode)
         markedPoints.append(markerNode)
+    }
+    
+    func markPoint(on sphere:SCNNode, at point3d:SCNVector3, with color:UIColor) {
+        let mark = SCNSphere(radius: 0.3)
+        mark.firstMaterial?.diffuse.contents = color
+        
+        let markerNode = SCNNode(geometry: mark)
+        markerNode.position = point3d
+        sphere.addChildNode(markerNode)
     }
     
     ///toggles between the 360 sphere and the scene that will contain the outputed texture
@@ -178,18 +191,32 @@ class ViewController: UIViewController {
     }
     
     func extractTexture(from nodes:[SCNNode]) {
-        let processedNodes = classifyCorners(from: nodes)
+//        let processedNodes = classifyCorners(from: nodes)
         
-        for (key, node) in processedNodes {
-            //set colors for the corners
+        let projectedPoints:[CGPoint] = nodes.map({
+            let projPoint = activeSceneView.projectPoint($0.position as SCNVector3)
+            let flattenedPoint = CGPoint(x: CGFloat(projPoint.x), y: CGFloat(projPoint.y))
+            print(flattenedPoint)
+            return flattenedPoint
+        })
+        
+        //FIXME: test edge case - if i set marked points very far away from each other (like on opposite sides of the sphere) the projected points have off screen CGpoint values that are not converted back into 3d properly. we can re-convert these 2d points into 3d space then we can loop through those 2d coordinates grabbing the projected 2d pixels without having to deal with the polar coordinates with the sphere. for example, https://stackoverflow.com/a/26945594/1079379
+        
+        for point2d in projectedPoints {
+            let hitResults:[SCNHitTestResult] = activeSceneView.hitTest(point2d, options: nil)
+            if let result = hitResults.first {
+                markPoint(on: result.node, at: result.localCoordinates, with: UIColor.red)
+            }
         }
     }
     
     func classifyCorners(from nodes:[SCNNode]) -> [String:SCNVector3] {
         let positions:[SCNVector3] = nodes.map({($0 as SCNNode).position})
         
-        //TODO: implement quickhull to classify corners
-        
+        //TODO: implement the quickhull for to identification of correct border lines for points to transfer into new texture (tl, tr, etc not actually necessary as long as the corners are sorted such that their edges don't intersect); right now we simply assume that the points are created in a circular manner which doesn't require quickhull
+//        https://en.wikipedia.org/wiki/Quickhull
+//        https://github.com/utahwithak/QHullSwift
+//        https://gist.github.com/adunsmoor/e848356a57980ab9f822
         let planeDict:[String:SCNVector3] = ["tl":positions[0], "tr":positions[1], "br":positions[2], "bl":positions[3]]
         return planeDict
     }
