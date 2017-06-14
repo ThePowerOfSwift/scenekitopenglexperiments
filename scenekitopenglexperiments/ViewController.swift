@@ -14,9 +14,7 @@ class ViewController: UIViewController {
     lazy var activeSceneView: SCNView = {
         let view = SCNView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.allowsCameraControl = true
         view.showsStatistics = true
-        view.isHidden = false
         return view
     }()
     
@@ -53,6 +51,7 @@ class ViewController: UIViewController {
         scene.rootNode.addChildNode(sphereNode)
         
         let cameraNode = SCNNode()
+        cameraNode.name = "camera"
         cameraNode.camera = SCNCamera()
         cameraNode.position = SCNVector3Make(0, 0, 0)
         scene.rootNode.addChildNode(cameraNode)
@@ -60,9 +59,22 @@ class ViewController: UIViewController {
         return scene
     }()
     
-    lazy var extractedScene:SCNScene = SCNScene()
+    lazy var extractedScene:SCNScene = {
+        let scene = SCNScene()
+        
+        let cameraNode = SCNNode()
+        cameraNode.name = "camera"
+        cameraNode.camera = SCNCamera()
+        cameraNode.position = SCNVector3Make(0, 0, 0)
+        scene.rootNode.addChildNode(cameraNode)
+        return scene
+    }()
     
     lazy var tapGestRec:UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(tapHandler(sender:)))
+    lazy var lookGestRec:UIPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(lookHandler(gestureRecognizer:)))
+    lazy var walkGestRec:UIPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(walkHandler(gestureRecognizer:)))
+    
+    lazy var elevation: Float = 0
     
     ///planes are stored as an array of vertex array indicies
     var markedPlanes:[[Int]] = [[Int]]() {
@@ -126,8 +138,9 @@ class ViewController: UIViewController {
         activeSceneView.scene = sphereScene
         self.view.addSubview(activeSceneView)
         
-        self.view.addGestureRecognizer(tapGestRec)
-        
+        activeSceneView.addGestureRecognizer(tapGestRec)
+        activeSceneView.addGestureRecognizer(lookGestRec)
+//        activeSceneView.addGestureRecognizer(walkGestRec)
         self.view.addSubview(toggleButton)
         
     }
@@ -143,13 +156,57 @@ class ViewController: UIViewController {
             return
         }
         
+        //location is directly taken from UIView, and is not tied to any referenced or passed in views
         let point2d = sender.location(in: self.view)
-//        print(point2d)
         let hitResults:[SCNHitTestResult] = activeSceneView.hitTest(point2d, options: nil)
         
         parseResults(hitResults: hitResults)
     }
-
+    
+    var originalCameraPosition : GLKQuaternion?
+    var panStartPoint : CGPoint?
+    
+    func lookHandler(gestureRecognizer : UIPanGestureRecognizer) {
+        switch gestureRecognizer.state {
+        case .possible:
+            break
+            
+        case .began:
+            panStartPoint = gestureRecognizer.translation(in: self.view)
+            beginPanMovement()
+            
+        case .changed:
+            let currentPoint = gestureRecognizer.translation(in: self.view)
+            updatePanMovementOffset(x: Float(currentPoint.x - panStartPoint!.x), y: Float(currentPoint.y - panStartPoint!.y))
+            
+        default:
+            endPanMovement()
+        }
+    }
+    
+    func beginPanMovement() {
+        originalCameraPosition = activeSceneView.scene?.rootNode.childNode(withName: "camera", recursively: false)!.orientation.toGLKQuaternion()
+    }
+    
+    func updatePanMovementOffset(x: Float, y: Float) {
+        if let originalPosition = originalCameraPosition {
+            let xRadians = x.horizontalOffsetPixelsToRadians(view: self.view)
+            let yRadians = y.verticalOffsetPixelsToRadians(view: self.view)
+            
+            activeSceneView.scene?.rootNode.childNode(withName: "camera", recursively: false)!.orientation = originalPosition.rotateBy(radiansOffsetX: xRadians, radiansOffsetY: yRadians).toSCNQuaternion()
+        }
+    }
+    
+    func endPanMovement() {
+        originalCameraPosition = nil
+    }
+    
+    func walkHandler(gestureRecognizer: UIPanGestureRecognizer) {
+        if gestureRecognizer.state == UIGestureRecognizerState.ended || gestureRecognizer.state == UIGestureRecognizerState.cancelled {
+            gestureRecognizer.setTranslation(CGPoint.zero, in: self.view)
+        }
+    }
+    
     func parseResults(hitResults: [SCNHitTestResult]) {
         //make sure there's at least 1 result and we assume its the sphere
         guard let firstResult = hitResults.first else {
@@ -303,4 +360,65 @@ class ViewController: UIViewController {
         }
     }
     
+}
+
+protocol Lookable {}
+protocol Walkable {}
+
+extension UIView: Lookable {
+    func enableLooking() {
+        
+    }
+}
+
+extension UIView: Walkable {
+    func enableWalking() {
+        
+    }
+}
+
+extension GLKQuaternion {
+    func toSCNQuaternion() -> SCNQuaternion {
+        return SCNQuaternion(self.x, self.y, self.z, self.w)
+    }
+}
+
+extension SCNQuaternion {
+    func toGLKQuaternion() -> GLKQuaternion {
+        return GLKQuaternion(q: (self.x, self.y, self.z, self.w))
+    }
+}
+
+extension GLKQuaternion {
+    func rotateBy(radiansOffsetX: Float, radiansOffsetY: Float) -> GLKQuaternion {
+        // Perform up and down rotations around *CAMERA* X axis (note the order of multiplication)
+        let xMultiplier = GLKQuaternionMakeWithAngleAndAxis(radiansOffsetY, 1, 0, 0)
+        var rotatedQuaternion = GLKQuaternionMultiply(self, xMultiplier)
+        
+        // Perform side to side rotations around *WORLD* Y axis (note the order of multiplication, different from above)
+        let yMultiplier = GLKQuaternionMakeWithAngleAndAxis(radiansOffsetX, 0, 1, 0)
+        rotatedQuaternion = GLKQuaternionMultiply(yMultiplier, rotatedQuaternion)
+        
+        return rotatedQuaternion
+    }
+    
+    func rotateBy(radiansOffsetZ: Float) -> GLKQuaternion {
+        let zMultiplier = GLKQuaternionMakeWithAngleAndAxis(radiansOffsetZ, 0, 0, 1)
+        let rotatedQuaternion = GLKQuaternionMultiply(self, zMultiplier)
+        
+        return rotatedQuaternion
+    }
+}
+
+extension Float {
+    func horizontalOffsetPixelsToRadians(view: UIView) -> (Float) {
+        let xFov = GLKMathDegreesToRadians(60 * Float(view.bounds.size.width / view.bounds.size.height))
+        return (xFov / Float(view.bounds.size.width)) * self
+    }
+    
+    func verticalOffsetPixelsToRadians(view: UIView) -> (Float) {
+        let yFov = GLKMathDegreesToRadians(60)
+        return (yFov / Float(view.bounds.size.height)) * self
+    }
+
 }
