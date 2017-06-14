@@ -50,11 +50,24 @@ class ViewController: UIViewController {
         sphereNode.name = "sphereScene"
         scene.rootNode.addChildNode(sphereNode)
         
+        let heroNode = SCNNode()
+        heroNode.name = "hero"
+        heroNode.physicsBody = SCNPhysicsBody(type: .dynamic, shape: SCNPhysicsShape(geometry: SCNCylinder(radius: 0.2, height: 1), options: nil))
+        heroNode.physicsBody?.angularDamping = 0.9999999
+        heroNode.physicsBody?.damping = 0.9999999
+        heroNode.physicsBody?.rollingFriction = 0
+        heroNode.physicsBody?.friction = 0
+        heroNode.physicsBody?.restitution = 0
+        heroNode.physicsBody?.velocityFactor = SCNVector3(x: 1, y: 0, z: 1)
+        heroNode.physicsBody?.isAffectedByGravity = false
+        heroNode.position = SCNVector3Make(0, 0, 0)
+        scene.rootNode.addChildNode(heroNode)
+        
         let cameraNode = SCNNode()
         cameraNode.name = "camera"
         cameraNode.camera = SCNCamera()
         cameraNode.position = SCNVector3Make(0, 0, 0)
-        scene.rootNode.addChildNode(cameraNode)
+        heroNode.addChildNode(cameraNode)
         
         return scene
     }()
@@ -163,43 +176,25 @@ class ViewController: UIViewController {
         parseResults(hitResults: hitResults)
     }
     
-    var originalCameraPosition : GLKQuaternion?
-    var panStartPoint : CGPoint?
-    
+//    https://github.com/nicklockwood/FPSControls
     func lookHandler(gestureRecognizer : UIPanGestureRecognizer) {
-        switch gestureRecognizer.state {
-        case .possible:
-            break
-            
-        case .began:
-            panStartPoint = gestureRecognizer.translation(in: self.view)
-            beginPanMovement()
-            
-        case .changed:
-            let currentPoint = gestureRecognizer.translation(in: self.view)
-            updatePanMovementOffset(x: Float(currentPoint.x - panStartPoint!.x), y: Float(currentPoint.y - panStartPoint!.y))
-            
-        default:
-            endPanMovement()
-        }
+        //get translation and convert to rotation
+        let translation = gestureRecognizer.translation(in: self.view)
+        let hAngle = acos(Float(translation.x) / 200) - Float(.pi / 2.0)
+        let vAngle = acos(Float(translation.y) / 200) - Float(.pi / 2.0)
+        
+        //rotate hero
+        activeSceneView.scene?.rootNode.childNode(withName: "hero", recursively: false)!.physicsBody?.applyTorque(SCNVector4(x: 0, y: 1, z: 0, w: hAngle), asImpulse: true)
+        
+        //tilt camera
+        elevation = max(Float(-.pi / 4.0), min(Float(.pi / 4.0), elevation + vAngle))
+        activeSceneView.scene?.rootNode.childNode(withName: "hero", recursively: false)!.childNode(withName: "camera", recursively: false)!.rotation = SCNVector4(x: 1, y: 0, z: 0, w: elevation)
+        
+        //reset translation
+        gestureRecognizer.setTranslation(CGPoint.zero, in: self.view)
+
     }
-    
-    func beginPanMovement() {
-        originalCameraPosition = activeSceneView.scene?.rootNode.childNode(withName: "camera", recursively: false)!.orientation.toGLKQuaternion()
-    }
-    
-    func updatePanMovementOffset(x: Float, y: Float) {
-        if let originalPosition = originalCameraPosition {
-            let xRadians = x.horizontalOffsetPixelsToRadians(view: self.view)
-            let yRadians = y.verticalOffsetPixelsToRadians(view: self.view)
-            
-            activeSceneView.scene?.rootNode.childNode(withName: "camera", recursively: false)!.orientation = originalPosition.rotateBy(radiansOffsetX: xRadians, radiansOffsetY: yRadians).toSCNQuaternion()
-        }
-    }
-    
-    func endPanMovement() {
-        originalCameraPosition = nil
-    }
+
     
     func walkHandler(gestureRecognizer: UIPanGestureRecognizer) {
         if gestureRecognizer.state == UIGestureRecognizerState.ended || gestureRecognizer.state == UIGestureRecognizerState.cancelled {
