@@ -75,11 +75,24 @@ class ViewController: UIViewController {
     lazy var extractedScene:SCNScene = {
         let scene = SCNScene()
         
+        let heroNode = SCNNode()
+        heroNode.name = "hero"
+        heroNode.physicsBody = SCNPhysicsBody(type: .dynamic, shape: SCNPhysicsShape(geometry: SCNCylinder(radius: 0.2, height: 1), options: nil))
+        heroNode.physicsBody?.angularDamping = 0.9999999
+        heroNode.physicsBody?.damping = 0.9999999
+        heroNode.physicsBody?.rollingFriction = 0
+        heroNode.physicsBody?.friction = 0
+        heroNode.physicsBody?.restitution = 0
+        heroNode.physicsBody?.velocityFactor = SCNVector3(x: 1, y: 0, z: 1)
+        heroNode.physicsBody?.isAffectedByGravity = false
+        heroNode.position = SCNVector3Make(0, 0, 0)
+        scene.rootNode.addChildNode(heroNode)
+        
         let cameraNode = SCNNode()
         cameraNode.name = "camera"
         cameraNode.camera = SCNCamera()
         cameraNode.position = SCNVector3Make(0, 0, 0)
-        scene.rootNode.addChildNode(cameraNode)
+        heroNode.addChildNode(cameraNode)
         return scene
     }()
     
@@ -149,11 +162,15 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         
         activeSceneView.scene = sphereScene
+        activeSceneView.delegate = self
         self.view.addSubview(activeSceneView)
         
         activeSceneView.addGestureRecognizer(tapGestRec)
-        activeSceneView.addGestureRecognizer(lookGestRec)
-//        activeSceneView.addGestureRecognizer(walkGestRec)
+        lookGestRec.delegate = self
+        self.view.addGestureRecognizer(lookGestRec)
+        lookGestRec.delegate = self
+        self.view.addGestureRecognizer(walkGestRec)
+        
         self.view.addSubview(toggleButton)
         
     }
@@ -355,4 +372,43 @@ class ViewController: UIViewController {
         }
     }
     
+}
+
+extension ViewController: UIGestureRecognizerDelegate {
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        
+        if gestureRecognizer == lookGestRec {
+            return touch.location(in: view).x > view.frame.size.width / 2
+        } else if gestureRecognizer == walkGestRec {
+            return touch.location(in: view).x < view.frame.size.width / 2
+        }
+        return true
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        
+        return true
+    }
+}
+
+extension ViewController: SCNSceneRendererDelegate {
+    
+    func renderer(_ aRenderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
+        
+        //get walk gesture translation
+        let translation = walkGestRec.translation(in: self.view)
+        
+        //create impulse vector for hero
+        if let heroNode = activeSceneView.scene?.rootNode.childNode(withName: "hero", recursively: false) {
+            let angle = heroNode.presentation.rotation.w * heroNode.presentation.rotation.y
+            var impulse = SCNVector3(x: max(-1, min(1, Float(translation.x) * 5)), y: 0, z: max(-1, min(1, Float(-translation.y) * 5)))
+            impulse = SCNVector3(
+                x: impulse.x * cos(angle) - impulse.z * sin(angle),
+                y: 0,
+                z: impulse.x * -sin(angle) - impulse.z * cos(angle)
+            )
+            heroNode.physicsBody?.applyForce(impulse, asImpulse: true)
+        }
+    }
 }
